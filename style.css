@@ -1,5 +1,5 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     background-color: #f0f0f0;
     display: flex;
     justify-content: center;
@@ -10,46 +10,56 @@ body {
 
 .container {
     background-color: #fff;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     text-align: center;
-    width: 300px;
+    width: 350px;
 }
 
 h1 {
-    font-size: 24px;
-    margin-bottom: 20px;
+    font-size: 22px;
+    margin-bottom: 25px;
     color: #333;
 }
 
 .numbers {
     display: flex;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 20px;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
 }
 
 .number {
     display: inline-block;
-    width: 60px;
-    height: 60px;
-    line-height: 60px;
+    width: 70px;
+    height: 70px;
+    line-height: 70px;
     border-radius: 50%;
     background-color: #ffcc00;
     color: #333;
-    font-size: 24px;
+    font-size: 28px;
     font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.or-text {
+    font-size: 18px;
+    color: #666;
+    font-weight: normal;
 }
 
 button {
-    padding: 10px 20px;
+    padding: 12px 25px;
     font-size: 18px;
     background-color: #007bff;
     color: #fff;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
 }
 
 button:hover {
