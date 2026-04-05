@@ -11,10 +11,19 @@
 </head>
 <body>
 
-    <div class="controls">
-        <button onclick="filterMarkers('전체')">전체</button>
-        <button onclick="filterMarkers('카페')">카페</button>
-        <button onclick="filterMarkers('맛집')">맛집</button>
+   <div class="controls" style="padding: 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px;">
+        <div>
+            <strong>카테고리:</strong>
+            <button onclick="filterMarkers('전체')">전체</button>
+            <button onclick="filterMarkers('카페')">카페</button>
+            <button onclick="filterMarkers('맛집')">맛집</button>
+        </div>
+        <div>
+            <strong>지도 언어:</strong>
+            <button onclick="changeLanguage('ko')" style="background-color: #28a745;">한국어</button>
+            <button onclick="changeLanguage('en')" style="background-color: #28a745;">English</button>
+            <button onclick="changeLanguage('th')" style="background-color: #28a745;">ไทย</button>
+        </div>
     </div>
 
     <div id="map"></div>
@@ -71,8 +80,104 @@
             });
         }
     </script>
-<script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw&callback=initMap">
-    </script>
+// main.js (혹은 index.html의 <script> 태그 내부)의 전체 내용을 아래 코드로 대체하세요.
+
+let map;
+let markers = [];
+// 1. 구글 시트에서 '웹에 게시(CSV)'한 주소를 여기에 넣으세요!
+const sheetUrl = "https://docs.google.com/spreadsheets/d/1fQWB61B46eUkrmvNh1SMNw5kzdjBgMgFKMNsDFLDz-4/export?format=csv"; 
+
+// 2. 여러분의 진짜 API 키를 여기에 복사해서 넣으세요!
+const YOUR_ACTUAL_API_KEY = "AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw";
+
+// 3. 현재 언어 상태 (기본은 한국어 'ko')
+let currentLanguage = 'ko'; 
+
+// 구글 지도 API 스크립트를 동적으로 로드하는 함수 (이게 마법의 핵심!)
+function loadGoogleMapsScript(langCode) {
+    // 이전 스크립트가 있다면 삭제 (지도를 깨끗하게 다시 그리기 위해)
+    const oldScript = document.getElementById("google-maps-script");
+    if (oldScript) {
+        oldScript.parentNode.removeChild(oldScript);
+    }
+
+    // 새로운 스크립트 태그 생성
+    const script = document.createElement("script");
+    script.id = "google-maps-script";
+    script.async = true;
+    script.defer = true;
+    
+    // 중요: URL 끝에 &language=${langCode}를 붙여서 구글에게 언어를 요청합니다.
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${YOUR_ACTUAL_API_KEY}&callback=initMap&language=${langCode}`;
+    
+    // 페이지에 스크립트 추가 -> 로드 완료되면 자동으로 initMap() 호출됨
+    document.body.appendChild(script);
+}
+
+// 언어를 바꾸는 함수 (버튼 클릭 시 실행)
+function changeLanguage(langCode) {
+    if (currentLanguage === langCode) return; // 이미 같은 언어면 무시
+    currentLanguage = langCode; // 현재 언어 상태 업데이트
+    loadGoogleMapsScript(langCode); // 새로운 언어로 지도 다시 로드
+}
+
+// 페이지가 처음 로드될 때 실행할 초기 언어 설정
+window.onload = function() {
+    loadGoogleMapsScript(currentLanguage); // 처음엔 한국어로 로드
+};
+
+// --- 기존 함수들을 조금 더 튼튼하게 수정 ---
+
+// 지도를 그리는 함수 (API 스크립트가 로드되면 실행됨)
+async function initMap() {
+    // 중심 좌표와 줌 레벨 (사용자님이 수정한 완벽한 값!)
+    const bangkok = { lat: 13.7210, lng: 100.5812 }; 
+    
+    map = new google.maps.Map(document.getElementById("map"), {
+        center: bangkok,
+        zoom: 13,
+    });
+
+    // markers 배열 초기화 (언어 바뀔 때 마커도 다시 찍어야 하므로 중요!)
+    markers = []; 
+    // 시트 데이터 가져오기 시작
+    loadData();
+}
+
+// 구글 시트 데이터를 로드하는 함수 (기존과 거의 동일)
+async function loadData() {
+    // ... (CSV 주소가 `/export?format=csv`로 잘 되어 있는지 확인하세요!)
+    try {
+        const response = await fetch(sheetUrl);
+        const data = await response.text();
+        const rows = data.split("\n").slice(1); 
+
+        rows.forEach(row => {
+            const cols = row.split(",");
+            const name = cols[0];
+            const category = cols[1];
+            const lat = parseFloat(cols[2]);
+            const lng = parseFloat(cols[3]);
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                // ... 마커 생성 코드 ... (기존과 동일)
+                const marker = new google.maps.Marker({
+                    position: { lat: lat, lng: lng },
+                    map: map,
+                    title: name,
+                    category: category 
+                });
+                markers.push(marker);
+            }
+        });
+    } catch (error) {
+        console.error("데이터 로딩 중 에러 발생:", error);
+    }
+}
+
+// 필터링 함수 (기존과 동일)
+function filterMarkers(category) {
+    // ... (기존 마커 setMap(map/null) 코드)
+}
 </body>
 </html>
