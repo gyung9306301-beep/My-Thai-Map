@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <title>나만의 맛집 지도</title>
     <style>
-        /* 지도의 크기와 기본 스타일 */
+        /* 지도의 크기와 상단 버튼 스타일 */
         #map { height: 600px; width: 100%; }
         .controls { padding: 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; }
-        button { padding: 10px; margin-right: 5px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; }
+        button { padding: 10px; margin-right: 5px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; }
         .category-btns button { background-color: #f8f9fa; }
         .lang-btns button { background-color: #28a745; color: white; border: none; }
+        .lang-btns button:hover { background-color: #218838; }
     </style>
 </head>
 <body>
@@ -34,39 +35,17 @@
     <script>
         let map;
         let markers = [];
-        let currentLanguage = 'ko'; // 기본 언어 설정
+        let currentLanguage = 'ko'; 
         
-        // 1. 구글 시트 주소 (CSV 형식)
+        // 1. 구글 시트 주소
         const sheetUrl = "https://docs.google.com/spreadsheets/d/1fQWB61B46eUkrmvNh1SMNw5kzdjBgMgFKMNsDFLDz-4/export?format=csv";
 
-        // 2. 여기에 새로 발급받은 진짜 API 키를 따옴표 안에 넣어주세요!
-        const AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw = "AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw";
-
-        // 구글맵 링크에서 @숫자,숫자(좌표)를 찾아내는 함수
-        function extractCoords(link) {
-            if (!link) return null;
-            const match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-            if (match) {
-                return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-            }
-            return null;
-        }
-
- <script>
-        let map;
-        let markers = [];
-        let currentLanguage = 'ko'; // 기본 언어
-        
-        // 1. 구글 시트 주소 (CSV 형식)
-        const sheetUrl = "https://docs.google.com/spreadsheets/d/1fQWB61B46eUkrmvNh1SMNw5kzdjBgMgFKMNsDFLDz-4/export?format=csv";
-
-        // 2. 여기에 새로 발급받은 진짜 API 키를 입력하세요!
+        // 2. 여기에 발급받은 진짜 API 키를 입력하세요! (따옴표 필수)
         const YOUR_ACTUAL_API_KEY = "AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw";
 
-        // 구글맵 링크에서 @숫자,숫자(좌표)를 찾아내는 함수
+        // 구글맵 링크에서 좌표(@위도,경도)만 추출하는 함수
         function extractCoords(link) {
             if (!link) return null;
-            // 링크 주소에서 @13.7,100.5 같은 좌표 부분을 찾아냅니다.
             const match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
             if (match) {
                 return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
@@ -74,17 +53,15 @@
             return null;
         }
 
-        // 지도를 그리는 메인 함수
+        // 지도를 처음 그리는 함수
         async function initMap() {
             const bangkok = { lat: 13.7210, lng: 100.5812 }; 
-            
             map = new google.maps.Map(document.getElementById("map"), {
                 center: bangkok,
                 zoom: 14,
             });
-
             markers = []; 
-            loadData();   
+            loadData(); // 시트 데이터 불러오기
         }
 
         // 구글 시트 데이터를 가져와 마커를 찍는 함수
@@ -92,12 +69,11 @@
             try {
                 const response = await fetch(sheetUrl);
                 const data = await response.text();
-                // 쉼표로 칸을 나눕니다.
                 const rows = data.split(/\r?\n/).slice(1); 
 
                 rows.forEach(row => {
                     const cols = row.split(",").map(c => c.trim());
-                    if (cols.length < 6) return;
+                    if (cols.length < 6) return; 
 
                     const place = {
                         name: cols[0],        // A: 상호
@@ -111,7 +87,7 @@
                     const coords = extractCoords(place.link);
 
                     if (coords) {
-                        // '일하기' 단어가 있으면 초록색(11번), 없으면 빨간색(7번) 아이콘
+                        // 일하기 좋은 곳은 초록색(11번), 나머지는 빨간색(7번) 아이콘
                         let iconUrl = "https://maps.google.com/mapfiles/ms/icons/red-dot.png";
                         if (place.subCategory && place.subCategory.includes("일하기")) {
                             iconUrl = "https://maps.google.com/mapfiles/ms/icons/green-dot.png";
@@ -125,14 +101,17 @@
                             category: place.category
                         });
 
+                        // 정보창 디자인 (픽토그램과 정보)
                         const contentString = `
                             <div style="padding:10px; min-width:200px; font-family: sans-serif;">
-                                <h3 style="margin:0 0 5px 0; color:#28a745;">${place.name}</h3>
-                                <p style="margin:2px 0; font-size:13px;"><b>분류:</b> ${place.category} (${place.subCategory})</p>
-                                <p style="margin:2px 0; font-size:13px;"><b>특징:</b> ${place.features}</p>
-                                <p style="margin:2px 0; font-size:13px;"><b>등급:</b> <span style="color:#f39c12; font-weight:bold;">${place.grade}</span></p>
+                                <h3 style="margin:0 0 5px 0; color:#28a745; font-size:16px;">${place.name}</h3>
+                                <div style="font-size:13px; line-height:1.5;">
+                                    <p style="margin:2px 0;"><b>분류:</b> ${place.category} (${place.subCategory})</p>
+                                    <p style="margin:2px 0;"><b>특징:</b> ${place.features}</p>
+                                    <p style="margin:2px 0;"><b>등급:</b> <span style="color:#f39c12; font-weight:bold;">${place.grade}</span></p>
+                                </div>
                                 <hr style="margin:8px 0; border:0; border-top:1px solid #eee;">
-                                <a href="${place.link}" target="_blank" style="color:#007bff; text-decoration:none; font-weight:bold;">📍 구글맵에서 보기 ↗</a>
+                                <a href="${place.link}" target="_blank" style="color:#007bff; text-decoration:none; font-weight:bold; font-size:13px;">📍 구글맵에서 보기 ↗</a>
                             </div>
                         `;
 
@@ -148,7 +127,7 @@
             }
         }
 
-        // 카테고리 필터 기능
+        // 버튼 누르면 필터링되는 기능
         function filterMarkers(category) {
             markers.forEach(marker => {
                 if (category === '전체' || marker.category === category) {
@@ -159,7 +138,7 @@
             });
         }
 
-        // 언어 변경 기능
+        // 언어 변경을 위해 엔진 다시 불러오기
         function loadGoogleMapsScript(langCode) {
             const oldScript = document.getElementById("google-maps-script");
             if (oldScript) oldScript.parentNode.removeChild(oldScript);
@@ -178,6 +157,7 @@
             loadGoogleMapsScript(langCode);
         }
 
+        // 시작할 때 한국어 지도로 로드
         window.onload = function() {
             loadGoogleMapsScript(currentLanguage);
         };
