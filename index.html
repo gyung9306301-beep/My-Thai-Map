@@ -40,11 +40,33 @@
         const sheetUrl = "https://docs.google.com/spreadsheets/d/1fQWB61B46eUkrmvNh1SMNw5kzdjBgMgFKMNsDFLDz-4/export?format=csv";
 
         // 2. 여기에 새로 발급받은 진짜 API 키를 따옴표 안에 넣어주세요!
-        const AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw = "여기에_진짜_API_키_입력";
+        const AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw = "AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw";
 
         // 구글맵 링크에서 @숫자,숫자(좌표)를 찾아내는 함수
         function extractCoords(link) {
             if (!link) return null;
+            const match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (match) {
+                return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            }
+            return null;
+        }
+
+ <script>
+        let map;
+        let markers = [];
+        let currentLanguage = 'ko'; // 기본 언어
+        
+        // 1. 구글 시트 주소 (CSV 형식)
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/1fQWB61B46eUkrmvNh1SMNw5kzdjBgMgFKMNsDFLDz-4/export?format=csv";
+
+        // 2. 여기에 새로 발급받은 진짜 API 키를 입력하세요!
+        const YOUR_ACTUAL_API_KEY = "AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw";
+
+        // 구글맵 링크에서 @숫자,숫자(좌표)를 찾아내는 함수
+        function extractCoords(link) {
+            if (!link) return null;
+            // 링크 주소에서 @13.7,100.5 같은 좌표 부분을 찾아냅니다.
             const match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
             if (match) {
                 return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
@@ -58,11 +80,11 @@
             
             map = new google.maps.Map(document.getElementById("map"), {
                 center: bangkok,
-                zoom: 13,
+                zoom: 14,
             });
 
-            markers = []; // 마커 리스트 초기화
-            loadData();   // 시트 데이터 불러오기
+            markers = []; 
+            loadData();   
         }
 
         // 구글 시트 데이터를 가져와 마커를 찍는 함수
@@ -70,10 +92,13 @@
             try {
                 const response = await fetch(sheetUrl);
                 const data = await response.text();
-                const rows = data.split("\n").slice(1); 
+                // 쉼표로 칸을 나눕니다.
+                const rows = data.split(/\r?\n/).slice(1); 
 
                 rows.forEach(row => {
-                    const cols = row.split(",");
+                    const cols = row.split(",").map(c => c.trim());
+                    if (cols.length < 6) return;
+
                     const place = {
                         name: cols[0],        // A: 상호
                         category: cols[1],    // B: 카테고리
@@ -83,14 +108,13 @@
                         link: cols[5]         // F: 구글맵 링크
                     };
 
-                    // 링크에서 자동으로 좌표 추출
                     const coords = extractCoords(place.link);
 
                     if (coords) {
-                        // 카테고리에 따른 아이콘 설정 (일하기 좋은 곳은 픽토그램 변경)
-                        let iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png"; // 기본 빨간 마커
+                        // '일하기' 단어가 있으면 초록색(11번), 없으면 빨간색(7번) 아이콘
+                        let iconUrl = "https://maps.google.com/mapfiles/ms/icons/red-dot.png";
                         if (place.subCategory && place.subCategory.includes("일하기")) {
-                            iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png"; // 일하기 좋은 곳은 초록색
+                            iconUrl = "https://maps.google.com/mapfiles/ms/icons/green-dot.png";
                         }
 
                         const marker = new google.maps.Marker({
@@ -101,20 +125,21 @@
                             category: place.category
                         });
 
-                        // 정보창 디자인
                         const contentString = `
                             <div style="padding:10px; min-width:200px; font-family: sans-serif;">
                                 <h3 style="margin:0 0 5px 0; color:#28a745;">${place.name}</h3>
                                 <p style="margin:2px 0; font-size:13px;"><b>분류:</b> ${place.category} (${place.subCategory})</p>
                                 <p style="margin:2px 0; font-size:13px;"><b>특징:</b> ${place.features}</p>
-                                <p style="margin:2px 0; font-size:13px;"><b>등급:</b> <span style="color:#f39c12;">${place.grade}</span></p>
+                                <p style="margin:2px 0; font-size:13px;"><b>등급:</b> <span style="color:#f39c12; font-weight:bold;">${place.grade}</span></p>
                                 <hr style="margin:8px 0; border:0; border-top:1px solid #eee;">
                                 <a href="${place.link}" target="_blank" style="color:#007bff; text-decoration:none; font-weight:bold;">📍 구글맵에서 보기 ↗</a>
                             </div>
                         `;
 
                         const infowindow = new google.maps.InfoWindow({ content: contentString });
-                        marker.addListener("click", () => { infowindow.open(map, marker); });
+                        marker.addListener("click", () => {
+                            infowindow.open(map, marker);
+                        });
                         markers.push(marker);
                     }
                 });
@@ -123,7 +148,7 @@
             }
         }
 
-        // 맛집 종류별로 보여주거나 숨기는 기능
+        // 카테고리 필터 기능
         function filterMarkers(category) {
             markers.forEach(marker => {
                 if (category === '전체' || marker.category === category) {
@@ -134,7 +159,7 @@
             });
         }
 
-        // 구글 지도 엔진을 선택한 언어로 다시 불러오는 기능
+        // 언어 변경 기능
         function loadGoogleMapsScript(langCode) {
             const oldScript = document.getElementById("google-maps-script");
             if (oldScript) oldScript.parentNode.removeChild(oldScript);
@@ -143,18 +168,16 @@
             script.id = "google-maps-script";
             script.async = true;
             script.defer = true;
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw}&callback=initMap&language=${langCode}`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${YOUR_ACTUAL_API_KEY}&callback=initMap&language=${langCode}`;
             document.body.appendChild(script);
         }
 
-        // 언어 버튼 클릭 시 호출됨
         function changeLanguage(langCode) {
             if (currentLanguage === langCode) return;
             currentLanguage = langCode;
             loadGoogleMapsScript(langCode);
         }
 
-        // 페이지가 처음 열릴 때 실행
         window.onload = function() {
             loadGoogleMapsScript(currentLanguage);
         };
