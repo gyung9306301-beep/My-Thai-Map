@@ -1,21 +1,79 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>แนะนำเลขลอตเตอรี่</title>
-    <link rel="stylesheet" href="style.css">
+    <title>나만의 맛집 지도</title>
+    <style>
+        #map { height: 600px; width: 100%; }
+        .controls { padding: 15px; background: #fff; border-bottom: 1px solid #ddd; }
+        button { padding: 10px; margin-right: 5px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>แนะนำเลขลอตเตอรี่</h1>
-        <div class="numbers">
-            <span class="number">-</span>
-            <span class="or-text">หรือ</span>
-            <span class="number">-</span>
-        </div>
-        <button id="generate">คลิกตรงนี้</button>
+
+    <div class="controls">
+        <button onclick="filterMarkers('전체')">전체</button>
+        <button onclick="filterMarkers('카페')">카페</button>
+        <button onclick="filterMarkers('맛집')">맛집</button>
     </div>
-    <script src="main.js"></script>
+
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let markers = [];
+        // 1. 구글 시트에서 '웹에 게시(CSV)'한 주소를 여기에 넣으세요!
+        const sheetUrl = "여기에_구글시트_CSV_주소를_넣으세요";
+
+        async function initMap() {
+            // 지도 초기화 (서울 중심)
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 37.5665, lng: 126.9780 },
+                zoom: 14,
+            });
+
+            // 시트 데이터 가져오기 시작
+            loadData();
+        }
+
+        async function loadData() {
+            const response = await fetch(sheetUrl);
+            const data = await response.text();
+            const rows = data.split("\n").slice(1); // 첫 번째 제목 줄 제외
+
+            rows.forEach(row => {
+                const cols = row.split(",");
+                // 시트 순서에 맞게 조정 (0: 이름, 1: 카테고리, 2: 위도, 3: 경도...)
+                const name = cols[0];
+                const category = cols[1];
+                const lat = parseFloat(cols[2]);
+                const lng = parseFloat(cols[3]);
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    const marker = new google.maps.Marker({
+                        position: { lat: lat, lng: lng },
+                        map: map,
+                        title: name,
+                        category: category // 필터링을 위한 저장
+                    });
+                    markers.push(marker);
+                }
+            });
+        }
+
+        function filterMarkers(category) {
+            markers.forEach(marker => {
+                if (category === '전체' || marker.category === category) {
+                    marker.setMap(map);
+                } else {
+                    marker.setMap(null);
+                }
+            });
+        }
+    </script>
+
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+    </script>
 </body>
 </html>
