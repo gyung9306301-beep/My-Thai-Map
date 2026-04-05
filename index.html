@@ -54,8 +54,36 @@
             markers = []; // 마커 리스트 초기화
             loadData();   // 시트 데이터 불러오기
         }
+let map;
+        let markers = [];
+        let currentLanguage = 'ko'; 
+        
+        // 1. 구글 시트 주소 (CSV 형식)
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/1fQWB61B46eUkrmvNh1SMNw5kzdjBgMgFKMNsDFLDz-4/export?format=csv";
 
-        // 구글 시트 데이터를 가져와 마커를 찍는 함수
+        // 2. 여러분의 진짜 API 키를 여기에 입력하세요!
+        const YOUR_ACTUAL_API_KEY = "AIzaSyAkRmZ9inBvb42HZUOT6bP2Ly-nVgkYvOw";
+
+        // 구글맵 링크에서 @숫자,숫자(좌표)를 찾아내는 함수
+        function extractCoords(link) {
+            if (!link) return null;
+            const match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (match) {
+                return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            }
+            return null;
+        }
+
+        async function initMap() {
+            const bangkok = { lat: 13.7210, lng: 100.5812 }; 
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: bangkok,
+                zoom: 13,
+            });
+            markers = []; 
+            loadData(); 
+        }
+
         async function loadData() {
             try {
                 const response = await fetch(sheetUrl);
@@ -64,27 +92,55 @@
 
                 rows.forEach(row => {
                     const cols = row.split(",");
-                    const name = cols[0];
-                    const category = cols[1];
-                    const lat = parseFloat(cols[2]);
-                    const lng = parseFloat(cols[3]);
+                    const place = {
+                        name: cols[0],        // A: 상호
+                        category: cols[1],    // B: 카테고리
+                        subCategory: cols[2], // C: 세부카테고리
+                        features: cols[3],    // D: 특징
+                        grade: cols[4],       // E: 등급
+                        link: cols[5]         // F: 구글맵 링크
+                    };
 
-                    if (!isNaN(lat) && !isNaN(lng)) {
+                    // 링크에서 자동으로 좌표 추출
+                    const coords = extractCoords(place.link);
+
+                    if (coords) {
+                        // 아이콘 설정 (일하기 좋은 곳은 다른 색으로)
+                        let iconUrl = "https://maps.google.com/mapfiles/ms/icons/red-dot.png"; 
+                        if (place.subCategory && place.subCategory.includes("일하기")) {
+                            iconUrl = "https://maps.google.com/mapfiles/ms/icons/green-dot.png"; 
+                        }
+
                         const marker = new google.maps.Marker({
-                            position: { lat: lat, lng: lng },
+                            position: coords,
                             map: map,
-                            title: name,
-                            category: category 
+                            title: place.name,
+                            icon: iconUrl,
+                            category: place.category
                         });
+
+                        // 정보창 디자인
+                        const contentString = `
+                            <div style="padding:10px; min-width:200px; font-family: sans-serif;">
+                                <h3 style="margin:0 0 5px 0; color:#28a745;">${place.name}</h3>
+                                <p style="margin:2px 0; font-size:13px;"><b>분류:</b> ${place.category} (${place.subCategory})</p>
+                                <p style="margin:2px 0; font-size:13px;"><b>특징:</b> ${place.features}</p>
+                                <p style="margin:2px 0; font-size:13px;"><b>등급:</b> <span style="color:#f39c12;">${place.grade}</span></p>
+                                <hr style="margin:8px 0; border:0; border-top:1px solid #eee;">
+                                <a href="${place.link}" target="_blank" style="color:#007bff; text-decoration:none; font-weight:bold;">📍 구글맵에서 보기 ↗</a>
+                            </div>
+                        `;
+
+                        const infowindow = new google.maps.InfoWindow({ content: contentString });
+                        marker.addListener("click", () => { infowindow.open(map, marker); });
                         markers.push(marker);
                     }
                 });
             } catch (error) {
-                console.error("데이터를 불러오는 중 에러가 발생했습니다:", error);
+                console.error("데이터 로딩 에러:", error);
             }
         }
 
-        // 맛집 종류별로 보여주거나 숨기는 기능
         function filterMarkers(category) {
             markers.forEach(marker => {
                 if (category === '전체' || marker.category === category) {
@@ -95,12 +151,9 @@
             });
         }
 
-        // 구글 지도 엔진을 선택한 언어로 다시 불러오는 기능
         function loadGoogleMapsScript(langCode) {
             const oldScript = document.getElementById("google-maps-script");
-            if (oldScript) {
-                oldScript.parentNode.removeChild(oldScript);
-            }
+            if (oldScript) oldScript.parentNode.removeChild(oldScript);
 
             const script = document.createElement("script");
             script.id = "google-maps-script";
@@ -110,14 +163,12 @@
             document.body.appendChild(script);
         }
 
-        // 언어 버튼 클릭 시 호출됨
         function changeLanguage(langCode) {
             if (currentLanguage === langCode) return;
             currentLanguage = langCode;
             loadGoogleMapsScript(langCode);
         }
 
-        // 페이지가 처음 열릴 때 실행
         window.onload = function() {
             loadGoogleMapsScript(currentLanguage);
         };
